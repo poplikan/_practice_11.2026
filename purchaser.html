@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Закупочные листы{% endblock %}
+{% block content %}
+<section class="wrap page">
+    <h1>Закупочные листы</h1>
+    <p class="muted">Формируются после закрытия бронирования за 24 часа.</p>
+    <div class="panel table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Мастер-класс</th>
+                    <th>Статус</th>
+                    <th>Порций</th>
+                    <th>Файл</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.starts_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ s.workshop.title }}</td>
+                    <td>{{ s.get_status_display }}</td>
+                    <td>{{ s.purchase_list.portions|default:0 }}</td>
+                    <td><a href="{% url 'export_csv' s.id %}">Скачать CSV</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5">Пока нет закрытых занятий.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

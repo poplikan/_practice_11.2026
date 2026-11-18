@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Бронирование — ВКУСНО{% endblock %}
+{% block content %}
+<section class="wrap page narrow">
+    <h1>Бронирование станции</h1>
+    <form method="post" action="{% url 'booking' session.id %}" class="panel booking-form">
+        {% csrf_token %}
+        <h2>{{ session.workshop.title }}</h2>
+        <p>{{ session.starts_at|date:"d.m.Y · H:i" }} · {{ session.hall.name|default:session.room }}</p>
+        
+        <label>
+            <input type="radio" name="ticket_type" value="single" checked> 
+            Один взрослый — {{ session.workshop.price }} ₽
+        </label>
+        <label>
+            <input type="radio" name="ticket_type" value="pair"> 
+            Взрослый + ребёнок (скидка 30% на детский билет)
+        </label>
+        
+        <p>Свободно станций: <b id="free-seats" data-api="{% url 'api_session_seats' session.id %}">{{ session.free_places }}</b></p>
+        <p class="muted">Парная бронь занимает одну рабочую станцию и включает две порции.</p>
+        
+        <button class="button full" type="submit" {% if not session.free_places %}disabled{% endif %}>Подтвердить бронь</button>
+    </form>
+</section>
+{% endblock %}

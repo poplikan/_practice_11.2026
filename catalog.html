@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Афиша мастер-классов{% endblock %}
+{% block content %}
+<section class="wrap page">
+    <h1>Афиша мастер-классов</h1>
+    <p class="muted">Выберите занятие и забронируйте удобную дату</p>
+    
+    <form class="filters" method="get">
+        <input name="q" placeholder="Поиск мастер-класса" value="{{ request.GET.q }}">
+        <select name="cuisine">
+            <option value="">Кухня</option>
+            {% for v,l in cuisines %}
+            <option value="{{ v }}" {% if request.GET.cuisine == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+        </select>
+        <select name="chef">
+            <option value="">Шеф-повар</option>
+            {% for c in chefs %}
+            <option value="{{ c.id }}" {% if request.GET.chef == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="date" value="{{ request.GET.date }}">
+        <select name="sort">
+            <option value="">Сортировка</option>
+            <option value="name">По названию</option>
+            <option value="price">По цене</option>
+            <option value="date">По дате</option>
+        </select>
+        <button class="button" type="submit">Найти</button>
+    </form>
+
+    <h2>Все мастер-классы</h2>
+    <div class="cards">
+        {% for item in workshops %}
+        <article class="card">
+            <div class="card-top">{{ item.cuisine }}</div>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.chef.name }}</p>
+            <div class="card-bottom">
+                <b>от {{ item.price }} ₽</b>
+                <a href="{% url 'workshop_detail' item.pk %}">Подробнее</a>
+            </div>
+        </article>
+        {% empty %}
+        <div class="empty">По вашему запросу ничего не найдено. Измените фильтры.</div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
