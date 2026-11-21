@@ -23,12 +23,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await response.json();
         counter.textContent = data.free;
 
-        // ВНЕДРЁННЫЙ ДЕФЕКТ 5: неявное преобразование числа в строку
         if (!data.booking_open) {
           setSubmit(true, "Бронирование закрыто");
-        } else if (Number(data.free) + "" === "0") {  // <--- ОШИБКА ЗДЕСЬ
+        } else if (Number(data.free) === 0) {
           setSubmit(true, "Свободных станций нет");
         } else {
+          // ВАЖНО: вернуть кнопку в рабочее состояние
           setSubmit(false, "Подтвердить бронь");
         }
       } catch (_) {
