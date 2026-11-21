@@ -161,7 +161,7 @@ def cabinet(request):
         .select_related("schedule", "schedule__masterclass", "schedule__hall")
         .order_by("-id")
     )
-    # --- ИСКУССТВЕННЫЙ ДЕФЕКТ 3: Забыли передать контекст ---
+    
     return render(request, "cabinet.html", {"bookings": bookings})
 
 def api_session_seats(request, session_id):
@@ -194,6 +194,6 @@ def contacts(request):
 
 def purchaser_list(request):
     sessions = Schedule.objects.select_related("masterclass", "hall", "chef").all()
-    # ИСКУССТВЕННЫЙ ДЕФЕКТ: обращаемся к несуществующему полю
-    test_error = sessions.first().some_fake_field
-    return render(request, "purchaser.html", {"sessions": sessions})
+    # ДЕФЕКТ 4: обращение к purchase_list без проверки на None
+    total_portions = sum(s.purchase_list.portions for s in sessions if s.purchase_list)
+    return render(request, "purchaser.html", {"sessions": sessions, "total_portions": total_portions})
