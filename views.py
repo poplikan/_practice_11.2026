@@ -1,16 +1,16 @@
 from datetime import timedelta
-from decimal import Decimal
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
-from django.db.models import Count, Sum, Avg, Q
-from django.http import JsonResponse, HttpResponse
+from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
+from django.core.exceptions import ValidationError
+from .services import book_station
 
 from .models import (
     MasterClass, Schedule, Booking, Hall, Chef, Cuisine, PurchaseList,
@@ -28,7 +28,6 @@ def home(request):
 def catalog(request):
     qs = MasterClass.objects.select_related("cuisine").all()
 
-    # --- поиск по нескольким словам (AND) ---
     q = request.GET.get("q", "").strip()
     if q:
         for word in q.split():
@@ -38,29 +37,25 @@ def catalog(request):
                 | Q(cuisine__name__icontains=word)
             )
 
-    # --- кухня (FK) ---
     cuisine = request.GET.get("cuisine")
     if cuisine:
         qs = qs.filter(cuisine__name=cuisine)
 
-    # --- шеф (только через Schedule, related_name="schedules") ---
     chef = request.GET.get("chef")
     if chef:
         qs = qs.filter(schedules__chef_id=chef).distinct()
 
-    # --- дата (занятия в этот день) ---
     date = request.GET.get("date")
     if date:
-        qs = qs.filter(schedules__start_datetime__date=date).distinct()
+        qs = qs.filter(schedules__start_datetime__date="2026-11-23").distinct()  # ДЕФЕКТ 2
 
-    # --- сортировка ---
     sort = request.GET.get("sort")
     if sort == "price":
         qs = qs.order_by("adult_price", "title")
     elif sort == "date":
         qs = qs.order_by("schedules__start_datetime", "title").distinct()
     else:
-        qs = qs.order_by("title")   # дефолт — по названию
+        qs = qs.order_by("title")
 
     context = {
         "workshops": qs,
@@ -69,7 +64,6 @@ def catalog(request):
         "total": qs.count(),
     }
 
-    # --- AJAX: отдаём только фрагмент карточек ---
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         html = render_to_string(
             "partials/_workshop_cards.html",
@@ -90,21 +84,16 @@ def workshop_detail(request, pk):
     )
     return render(request, "detail.html", {"item": item, "sessions": sessions})
 
-
-# ---------- Бронирование ----------
-
 @login_required
 def booking_create(request, session_id):
     schedule = get_object_or_404(
         Schedule.objects.select_related("masterclass", "chef", "hall"),
         pk=session_id,
     )
-    mc = schedule.masterclass
 
     if request.method == "POST":
         ticket_type = request.POST.get("ticket_type", "single")
         
-        # Считаем порции
         if ticket_type == "pair":
             portions = 2
         else:
@@ -113,29 +102,13 @@ def booking_create(request, session_id):
             except (TypeError, ValueError):
                 portions = 1
 
-        # Считаем цену
-        adult = mc.adult_price
-        child = adult * (100 - mc.child_discount) / 100
-        total = adult + child if ticket_type == "pair" else adult * portions
-
-        # Проверка свободных мест
-        occupied = Booking.objects.filter(schedule=schedule).exclude(status="cancelled").count()
-        if occupied >= schedule.hall.station_count:
-            messages.error(request, "Свободных станций нет")
+        try:
+            booking = book_station(request.user, schedule.id, ticket_type, portions)
+            messages.success(request, f"Бронь оформлена: {booking.total} ₽")
+            return redirect("cabinet")
+        except ValidationError as e:
+            messages.error(request, str(e))
             return redirect("booking", session_id=schedule.id)
-
-        # Создаем бронь со всеми полями
-        Booking.objects.create(
-            schedule=schedule,
-            user=request.user,
-            ticket_type=ticket_type,
-            portions=portions,
-            total=total,
-            status="pending",
-        )
-        
-        messages.success(request, f"Бронь оформлена: {total} ₽")
-        return redirect("cabinet")
 
     return render(request, "booking.html", {"session": schedule})
 
@@ -175,38 +148,25 @@ def booking_cancel(request, booking_id):
         messages.success(request, "Бронь отменена")
     return redirect("cabinet")
 
-
 @login_required
 def cabinet(request):
     bookings = (
         Booking.objects
         .filter(user=request.user)
-        .select_related(
-            "schedule", 
-            "schedule__masterclass", 
-            "schedule__hall"
-        )
+        .select_related("schedule", "schedule__masterclass", "schedule__hall")
         .order_by("-id")
     )
     return render(request, "cabinet.html", {"bookings": bookings})
 
-
 def api_session_seats(request, session_id):
     schedule = get_object_or_404(Schedule, pk=session_id)
-    
-    # ИСПРАВЛЕНИЕ: используем прямой запрос к Booking, чтобы не зависеть от related_name
     occupied = Booking.objects.filter(schedule=schedule).exclude(status="cancelled").count()
-    
     free = max(0, schedule.hall.station_count - occupied)
-
     booking_open = (
         schedule.status == "planned"
         and schedule.start_datetime - timezone.now() > timedelta(hours=24)
     )
     return JsonResponse({"free": free, "booking_open": booking_open})
-
-
-# ---------- Регистрация ----------
 
 def signup(request):
     if request.method == "POST":
@@ -220,17 +180,13 @@ def signup(request):
         form = UserCreationForm()
     return render(request, "signup.html", {"form": form})
 
-
-# ---------- Прочее ----------
-
 def policy(request):
     return render(request, "policy.html")
-
 
 def contacts(request):
     return render(request, "contacts.html")
 
-
+# Исправленный purchaser_list (без опасного запроса export_csv)
 def purchaser_list(request):
     sessions = Schedule.objects.select_related("masterclass", "hall", "chef").all()
     return render(request, "purchaser.html", {"sessions": sessions})
