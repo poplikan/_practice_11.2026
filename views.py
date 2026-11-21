@@ -162,7 +162,7 @@ def cabinet(request):
         .order_by("-id")
     )
     # --- ИСКУССТВЕННЫЙ ДЕФЕКТ 3: Забыли передать контекст ---
-    return render(request, "cabinet.html", {})
+    return render(request, "cabinet.html", {"bookings": bookings})
 
 def api_session_seats(request, session_id):
     schedule = get_object_or_404(Schedule, pk=session_id)
