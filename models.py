@@ -144,6 +144,11 @@ class Schedule(models.Model):
 class Booking(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bookings", verbose_name="Пользователь")
     schedule = models.ForeignKey(Schedule, on_delete=models.PROTECT, related_name="bookings", verbose_name="Занятие")
+    TICKET_CHOICES = [
+        ("single", "Один взрослый"),
+        ("pair", "Взрослый + ребёнок"),
+    ] 
+
     booking_type = models.CharField(
         max_length=10,
         choices=[("adult", "Один взрослый"), ("pair", "Взрослый + ребёнок")],
@@ -157,6 +162,18 @@ class Booking(models.Model):
         verbose_name="Статус"
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    ticket_type = models.CharField(
+        max_length=10, 
+        choices=TICKET_CHOICES, 
+        default="single",
+        verbose_name="Тип билета"
+    )
+    total = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name="Итоговая сумма"
+    )
 
     class Meta:
         verbose_name = "Бронь рабочей станции"

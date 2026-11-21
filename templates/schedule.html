@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Расписание{% endblock %}
+{% block content %}
+<section class="wrap page">
+    <h1>Управление расписанием</h1>
+    
+    <div class="panel">
+        <h2>Добавить занятие</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="button">Сохранить</button>
+        </form>
+    </div>
+    
+    <div class="panel table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Мастер-класс</th>
+                    <th>Дата</th>
+                    <th>Шеф</th>
+                    <th>Зал</th>
+                    <th>Станции</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.workshop.title }}</td>
+                    <td>{{ s.starts_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ s.workshop.chef.name }}</td>
+                    <td>{{ s.hall.name|default:s.room }}</td>
+                    <td>{{ s.occupied_stations }}/{{ s.hall.station_count|default:s.capacity }}</td>
+                    <td>
+                        <a href="{% url 'session_edit' s.id %}">Изменить</a> · 
+                        <a href="{% url 'session_participants' s.id %}">Участники</a>
+                        <form method="post" action="{% url 'session_delete' s.id %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit">Удалить</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

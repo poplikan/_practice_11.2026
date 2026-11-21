@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.title }} — ВКУСНО{% endblock %}
+
+{% block content %}
+<section class="wrap page">
+
+    <p class="crumb">
+        <a href="{% url 'home' %}">Главная</a> /
+        <a href="{% url 'catalog' %}">Афиша</a> /
+        {{ item.title }}
+    </p>
+
+    <div class="detail-head">
+        <div>
+            <p class="eyebrow">{{ item.cuisine.name }}</p>
+
+            <h1>{{ item.title }}</h1>
+
+            <p class="lead">
+                {{ item.description|default:"Научитесь готовить любимые блюда вместе с нашим шеф-поваром." }}
+            </p>
+        </div>
+
+        <div class="detail-panel">
+            <b>от {{ item.adult_price }} ₽</b>
+            <p>Выберите дату и забронируйте место</p>
+
+            {% for s in sessions %}
+            <div class="session-row">
+                <span>
+                    {{ s.start_datetime|date:"d.m.Y · H:i" }}
+                    <small>
+                        Зал «{{ s.hall.name }}»<br>
+                        Шеф-повар: {{ s.chef.name }}
+                    </small>
+                </span>
+
+                <a class="button small" href="{% url 'booking' s.id %}">
+                    Забронировать
+                </a>
+            </div>
+            {% empty %}
+            <p>Ближайших дат пока нет.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <h2>Программа мастер-класса</h2>
+
+    {# Блюда мастер-класса через промежуточную модель MasterClassDish #}
+    {% with mcds=item.masterclassdish_set.all %}
+      {% if mcds %}
+      <div class="program">
+        {% for mcd in mcds %}
+        <div class="program-item">
+            {% if mcd.dish.photo %}
+                <img src="{{ mcd.dish.photo.url }}"
+                     alt="{{ mcd.dish.name }}"
+                     class="program-photo">
+            {% endif %}
+
+            <b>{{ mcd.dish.name }}</b>
+
+            {% if mcd.dish.description %}
+                <p>{{ mcd.dish.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="program">
+        <div class="program-item">
+            Знакомство с продуктами и приготовление блюда.
+        </div>
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    {% with mcds=item.masterclassdish_set.all %}
+      {% if mcds %}
+      <h2>Блюда и ингредиенты</h2>
+
+      <div class="program">
+        {% for mcd in mcds %}
+        <article class="program-item">
+            <b>{{ mcd.dish.name }}</b>
+
+            {% if mcd.dish.description %}
+                <p>{{ mcd.dish.description }}</p>
+            {% endif %}
+
+            {% with recipes=mcd.dish.recipe_set.all %}
+                {% if recipes %}
+                <small>
+                    Состав:
+                    {% for recipe in recipes %}
+                        {{ recipe.ingredient.name }} —
+                        {{ recipe.amount_per_portion }}
+                        {{ recipe.ingredient.unit }}{% if not forloop.last %}; {% endif %}
+                    {% endfor %}
+                </small>
+                {% endif %}
+            {% endwith %}
+        </article>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+</section>
+{% endblock %}
