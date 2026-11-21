@@ -49,8 +49,8 @@ def catalog(request):
 
     date = request.GET.get("date")
     if date:
-        # --- ИСКУССТВЕННЫЙ ДЕФЕКТ 2: Хардкод даты (фильтр всегда ищет 23 ноября) ---
-        qs = qs.filter(schedules__start_datetime__date="2026-11-23").distinct()
+        
+        qs = qs.filter(schedules__start_datetime__date=date).distinct()
 
     sort = request.GET.get("sort")
     if sort == "price":
