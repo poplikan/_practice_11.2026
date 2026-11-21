@@ -41,7 +41,7 @@ def book_station(user, schedule_id, ticket_type, portions):
         mc = schedule.masterclass
         adult = mc.adult_price
         child = adult * (100 - mc.child_discount) / 100
-        total = adult * portions  # ДЕФЕКТ 1
+        total = adult + child if ticket_type == "pair" else adult * portions
 
         booking = Booking.objects.create(
             user=user,

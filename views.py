@@ -1,16 +1,18 @@
 from datetime import timedelta
+from decimal import Decimal
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
-from django.db.models import Q
-from django.http import JsonResponse
+from django.db.models import Count, Sum, Avg, Q
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
-from django.core.exceptions import ValidationError
 from .services import book_station
+from django.core.exceptions import ValidationError 
 
 from .models import (
     MasterClass, Schedule, Booking, Hall, Chef, Cuisine, PurchaseList,
@@ -47,7 +49,8 @@ def catalog(request):
 
     date = request.GET.get("date")
     if date:
-        qs = qs.filter(schedules__start_datetime__date="2026-11-23").distinct()  # ДЕФЕКТ 2
+        # --- ИСКУССТВЕННЫЙ ДЕФЕКТ 2: Хардкод даты (фильтр всегда ищет 23 ноября) ---
+        qs = qs.filter(schedules__start_datetime__date="2026-11-23").distinct()
 
     sort = request.GET.get("sort")
     if sort == "price":
@@ -103,6 +106,7 @@ def booking_create(request, session_id):
                 portions = 1
 
         try:
+            # Тут теперь нет перезаписи total, расчет берется из book_station (с дефектом 1)
             booking = book_station(request.user, schedule.id, ticket_type, portions)
             messages.success(request, f"Бронь оформлена: {booking.total} ₽")
             return redirect("cabinet")
@@ -148,6 +152,7 @@ def booking_cancel(request, booking_id):
         messages.success(request, "Бронь отменена")
     return redirect("cabinet")
 
+
 @login_required
 def cabinet(request):
     bookings = (
@@ -156,7 +161,8 @@ def cabinet(request):
         .select_related("schedule", "schedule__masterclass", "schedule__hall")
         .order_by("-id")
     )
-    return render(request, "cabinet.html", {"bookings": bookings})
+    # --- ИСКУССТВЕННЫЙ ДЕФЕКТ 3: Забыли передать контекст ---
+    return render(request, "cabinet.html", {})
 
 def api_session_seats(request, session_id):
     schedule = get_object_or_404(Schedule, pk=session_id)
@@ -186,7 +192,8 @@ def policy(request):
 def contacts(request):
     return render(request, "contacts.html")
 
-# Исправленный purchaser_list (без опасного запроса export_csv)
 def purchaser_list(request):
     sessions = Schedule.objects.select_related("masterclass", "hall", "chef").all()
+    # ИСКУССТВЕННЫЙ ДЕФЕКТ: обращаемся к несуществующему полю
+    test_error = sessions.first().some_fake_field
     return render(request, "purchaser.html", {"sessions": sessions})
