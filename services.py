@@ -47,10 +47,12 @@ def book_station(user, schedule_id, ticket_type, portions):
         if schedule.start_datetime <= timezone.now():
             raise ValidationError("Нельзя забронировать прошедшее занятие.")
 
-        booked = Booking.objects.filter(
-            schedule=schedule,
-            status__in=['active', 'paid'],
-        ).count()
+        booked = (
+            Booking.objects
+            .select_for_update()
+            .filter(schedule=schedule, status__in=["active", "paid"])
+            .count()
+        )
 
         if booked >= schedule.hall.station_count:
             logger.warning(
@@ -123,3 +125,9 @@ def calc_total(mc, ticket_type, portions):
     if ticket_type == "pair":
         return (adult + child) * portions
     return adult * portions
+
+
+def occupied_seats(schedule):
+    return Booking.objects.filter(
+        schedule=schedule, status__in=["active", "paid"]
+    ).count()

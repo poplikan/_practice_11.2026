@@ -3,14 +3,17 @@ from decimal import Decimal
 import csv
 from io import StringIO
 import logging
-
+from django.db.models import Count, Sum, Avg, Q, Min
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.views.decorators.http import require_POST
+from .forms import ChefSignUpForm, DishForm, ScheduleForm
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Sum, Avg, Q
+
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
@@ -19,6 +22,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.contrib.auth import logout as auth_logout
+from django.http import HttpResponseForbidden
 from .forms import ChefSignUpForm
 from datetime import datetime
 from .services import (
@@ -375,17 +379,12 @@ def chef_cabinet(request):
 
 @login_required
 def chef_session_participants(request, schedule_id):
-    """Шеф видит участников только своего занятия."""
     if not hasattr(request.user, "chef_profile"):
-        return redirect("home")
-
-    schedule = get_object_or_404(
-        Schedule.objects.select_related("masterclass", "hall", "chef"),
-        pk=schedule_id,
-    )
+        return HttpResponseForbidden("Нет профиля шефа")
+    schedule = get_object_or_404(...)
     if schedule.chef_id != request.user.chef_profile.id:
-        messages.error(request, "Это занятие ведёт другой шеф.")
-        return redirect("chef_cabinet")
+        return HttpResponseForbidden("Это занятие ведёт другой шеф.")
+    
 
     bookings = (
         schedule.bookings
@@ -397,3 +396,42 @@ def chef_session_participants(request, schedule_id):
         "schedule": schedule,
         "bookings": bookings,
     })
+
+
+
+@staff_member_required
+def schedule_list(request):
+    sessions = (
+        Schedule.objects
+        .select_related("masterclass", "hall", "chef")
+        .annotate(
+            active_count=Count(
+                "bookings", filter=Q(bookings__status__in=["active", "paid"])
+            )
+        )
+        .order_by("-start_datetime")
+    )
+    return render(request, "schedule.html", {"sessions": sessions})
+
+
+@staff_member_required
+def session_edit(request, schedule_id):
+    schedule = get_object_or_404(Schedule, pk=schedule_id)
+    if request.method == "POST":
+        form = ScheduleForm(request.POST, instance=schedule, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Занятие обновлено")
+            return redirect("schedule_list")
+    else:
+        form = ScheduleForm(instance=schedule, user=request.user)
+    return render(request, "session_form.html", {"form": form, "schedule": schedule})
+
+
+@staff_member_required
+@require_POST
+def session_delete(request, schedule_id):
+    schedule = get_object_or_404(Schedule, pk=schedule_id)
+    schedule.delete()
+    messages.success(request, "Занятие удалено")
+    return redirect("schedule_list")
