@@ -83,7 +83,10 @@ def catalog(request):
     if sort == "price":
         qs = qs.order_by("adult_price", "title")
     elif sort == "date":
-        qs = qs.order_by("schedules__start_datetime", "title").distinct()
+        qs = (
+            qs.annotate(next_date=Min("schedules__start_datetime"))
+            .order_by("next_date", "title")
+        )
     else:
         qs = qs.order_by("title")
 
