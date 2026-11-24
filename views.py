@@ -287,6 +287,7 @@ def dashboard(request):
 
 
 # ---------- FR-16: Шеф видит участников своего занятия ----------
+@staff_member_required
 def session_participants(request, schedule_id):
     schedule = get_object_or_404(
         Schedule.objects.select_related("masterclass", "hall", "chef"),
