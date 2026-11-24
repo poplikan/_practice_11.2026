@@ -298,16 +298,12 @@ def session_participants(request, schedule_id):
         pk=schedule_id,
     )
     bookings = (
-        schedule.bookings
-        .filter(status__in=['active', 'paid'])
-        .select_related("user")
-        .order_by("-created_at")
+        schedule.bookings.filter(status__in=["active", "paid"])
+        .select_related("user").order_by("-created_at")
     )
     return render(request, "session_participants.html", {
-        "schedule": schedule,
-        "bookings": bookings,
+        "schedule": schedule, "bookings": bookings,
     })
-
 
 
 @staff_member_required
@@ -425,8 +421,9 @@ def session_edit(request, schedule_id):
             return redirect("schedule_list")
     else:
         form = ScheduleForm(instance=schedule, user=request.user)
-    return render(request, "session_form.html", {"form": form, "schedule": schedule})
-
+    return render(request, "session_form.html", {
+        "form": form, "schedule": schedule,
+    })
 
 @staff_member_required
 @require_POST
