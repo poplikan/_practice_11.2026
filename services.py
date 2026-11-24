@@ -60,13 +60,7 @@ def book_station(user, schedule_id, ticket_type, portions):
             raise ValidationError("Свободных станций нет. Выберите другую дату.")
 
         mc = schedule.masterclass
-        adult = mc.adult_price
-        child = adult * (100 - mc.child_discount) / 100
-
-        if ticket_type == "pair":
-            total = (adult + child) * portions
-        else:
-            total = adult * portions
+        total = calc_total(schedule.masterclass, ticket_type, portions)
 
         booking = Booking.objects.create(
             user=user,
@@ -122,3 +116,10 @@ def generate_purchase_list(schedule_id):
             schedule_id, total_portions, len(per_ingredient),
         )
         return pl
+
+def calc_total(mc, ticket_type, portions):
+    adult = mc.adult_price
+    child = adult * (100 - mc.child_discount) / 100
+    if ticket_type == "pair":
+        return (adult + child) * portions
+    return adult * portions
