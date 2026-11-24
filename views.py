@@ -196,12 +196,8 @@ def cabinet(request):
 
 def api_session_seats(request, session_id):
     schedule = get_object_or_404(Schedule, pk=session_id)
-    occupied = Booking.objects.filter(schedule=schedule).exclude(status="cancelled").count()
-    free = max(0, schedule.hall.station_count - occupied)
-    booking_open = (
-        schedule.status == "planned"
-        and schedule.start_datetime - timezone.now() > timedelta(hours=24)
-    )
+    free = max(0, schedule.hall.station_count - occupied_seats(schedule))
+    booking_open = booking_is_open(schedule)
     return JsonResponse({"free": free, "booking_open": booking_open})
 
 def signup(request):
