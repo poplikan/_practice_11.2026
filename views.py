@@ -118,18 +118,13 @@ def booking_create(request, session_id):
             request.user.username, session_id, ticket_type
         )
 
-        if ticket_type == "pair":
-            portions = 2
-        else:
-            try:
-                portions = max(1, min(10, int(request.POST.get("portions", 1))))
-            except (TypeError, ValueError):
-                
-                logger.warning(
-                    "Некорректное количество порций: user=%s, session=%s, raw_value=%s",
-                    request.user.username, session_id, request.POST.get("portions")
-                )
-                portions = 1
+        ticket_type = request.POST.get("ticket_type", "single")
+        raw = request.POST.get("portions", "1")
+        try:
+            portions = int(raw)
+        except (TypeError, ValueError):
+            messages.error(request, "Укажите корректное количество порций.")
+            return redirect("booking", session_id=schedule.id)
 
         try:
             booking = book_station(request.user, schedule.id, ticket_type, portions)
