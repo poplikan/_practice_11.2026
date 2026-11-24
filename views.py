@@ -172,6 +172,7 @@ def booking_edit(request, booking_id):
 
     messages.success(request, "Бронь обновлена")
     return redirect("cabinet")
+
 @login_required
 @require_POST
 def booking_cancel(request, booking_id):
@@ -218,6 +219,7 @@ def policy(request):
 def contacts(request):
     return render(request, "contacts.html")
 
+@staff_member_required
 def purchaser_list(request):
     sessions = (
         Schedule.objects
