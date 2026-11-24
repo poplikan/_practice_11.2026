@@ -3,28 +3,32 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Booking, Schedule, MasterClass, Dish
 
+
 class SignUpForm(UserCreationForm):
     email = forms.EmailField(required=True, label="Электронная почта")
-    
+
     class Meta:
         model = User
-        fields = ("username", "first_name", "last_name", "email", "password1", "password2")
+        fields = ("username", "first_name", "last_name", "email",
+                  "password1", "password2")
+
 
 class BookingForm(forms.Form):
-    # Предполагается, что в модели Booking есть константа TICKETS (или используем CHOICES напрямую)
     ticket_type = forms.ChoiceField(
-        choices=Booking._meta.get_field('booking_type').choices, 
-        widget=forms.RadioSelect, 
-        label="Тип брони"
+        choices=Booking.TICKET_CHOICES,
+        widget=forms.RadioSelect,
+        label="Тип билета",
     )
+
 
 class ScheduleForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        # Логика: если пользователь — шеф (и не админ), он видит только свои МК
         if user and user.groups.filter(name="Шеф").exists() and not user.is_superuser:
-            self.fields["masterclass"].queryset = self.fields["masterclass"].queryset.filter(chef__user=user)
-            
+            self.fields["masterclass"].queryset = (
+                self.fields["masterclass"].queryset.filter(chef__user=user)
+            )
+
     class Meta:
         model = Schedule
         fields = ("masterclass", "start_datetime", "hall", "status")
@@ -37,6 +41,7 @@ class ScheduleForm(forms.ModelForm):
             "hall": "Зал",
             "status": "Статус",
         }
+
 
 class DishForm(forms.ModelForm):
     class Meta:
@@ -59,7 +64,40 @@ class DishForm(forms.ModelForm):
                 if image.format not in ("JPEG", "PNG"):
                     raise forms.ValidationError("Разрешены только изображения JPEG и PNG.")
                 image.verify()
-                photo.seek(0)
             except (UnidentifiedImageError, OSError):
                 raise forms.ValidationError("Файл не является корректным изображением.")
+            finally:
+                photo.seek(0)         
         return photo
+
+
+class ChefSignUpForm(UserCreationForm):
+    """Регистрация шефа: создаёт User + Chef + группа «Шеф»."""
+    email = forms.EmailField(required=True, label="Электронная почта")
+    chef_name = forms.CharField(max_length=100, label="Имя шефа (как в каталоге)")
+    description = forms.CharField(
+        widget=forms.Textarea, required=False, label="Коротко о себе"
+    )
+
+    class Meta:
+        model = User
+        fields = ("username", "first_name", "last_name", "email",
+                  "password1", "password2")
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        user.first_name = self.cleaned_data["first_name"]
+        user.last_name = self.cleaned_data["last_name"]
+        if commit:
+            user.save()
+            from django.contrib.auth.models import Group
+            chef_group, _ = Group.objects.get_or_create(name="Шеф")
+            user.groups.add(chef_group)
+            from .models import Chef
+            Chef.objects.create(
+                user=user,
+                name=self.cleaned_data["chef_name"],
+                description=self.cleaned_data.get("description", ""),
+            )
+        return user
