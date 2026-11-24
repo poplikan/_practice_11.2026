@@ -20,6 +20,10 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.contrib.auth import logout as auth_logout
 from .forms import ChefSignUpForm
+from .services import (
+    book_station, generate_purchase_list,
+    occupied_seats, booking_is_open, calc_total,   
+)
 
 from .forms import DishForm
 from .models import (
@@ -146,20 +150,28 @@ def booking_create(request, session_id):
 @require_POST
 def booking_edit(request, booking_id):
     booking = get_object_or_404(Booking, pk=booking_id, user=request.user)
+
+    if booking.status == "cancelled":
+        messages.error(request, "Отменённую бронь нельзя изменить.")
+        return redirect("cabinet")
+
     new_type = request.POST.get("ticket_type")
-    
     if new_type not in ("single", "pair"):
         messages.error(request, "Некорректный тип билета")
+        return redirect("cabinet")
+
+
+    if not booking_is_open(booking.schedule):
+        messages.error(request, "Занятие уже закрыто для изменения брони.")
         return redirect("cabinet")
 
     booking.ticket_type = new_type
     booking.portions = 1
     booking.total = calc_total(booking.schedule.masterclass, new_type, 1)
     booking.save()
-    
+
     messages.success(request, "Бронь обновлена")
     return redirect("cabinet")
-
 @login_required
 @require_POST
 def booking_cancel(request, booking_id):
