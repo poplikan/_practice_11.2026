@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Личный кабинет{% endblock %}
+{% block content %}
+<section class="wrap page">
+    <h1>Личный кабинет</h1>
+    <div class="cabinet-grid">
+        <aside class="side-nav">
+            <a href="#bookings">Мои брони</a>
+            <a href="{% url 'password_change' %}">Сменить пароль</a>
+            <a href="{% url 'policy' %}">Правила отмены</a>
+        </aside>
+        
+        <section class="panel" id="bookings">
+            <h2>Мои брони</h2>
+            {% for b in bookings %}
+                <div class="booking-line">
+                    <div>
+                        {# Заменили b.session на b.schedule #}
+                        <b>{{ b.schedule.masterclass.title|default:"Мастер-класс" }}</b>
+                        <p>{{ b.schedule.start_datetime|date:"d.m.Y · H:i" }} · {{ b.get_ticket_type_display }}</p>
+                        <span class="pill">{{ b.get_status_display }}</span>
+                        <p>{{ b.total }} ₽ · {{ b.portions }} порц.</p>
+                    </div>
+
+                    {% if b.status != "cancelled" %}
+                    <form method="post" action="{% url 'booking_edit' b.id %}" class="inline-form">
+                        {% csrf_token %}
+                        <select name="ticket_type">
+                            <option value="single" {% if b.ticket_type == "single" %}selected{% endif %}>Один взрослый</option>
+                            <option value="pair" {% if b.ticket_type == "pair" %}selected{% endif %}>Взрослый + ребёнок</option>
+                        </select>
+                        <button class="button small" type="submit">Изменить</button>
+                    </form>
+
+                    <form method="post" action="{% url 'booking_cancel' b.id %}">
+                        {% csrf_token %}
+                        <button class="button danger" type="submit">Отменить бронь</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <p>У вас пока нет бронирований.</p>
+                {% endfor %}
+        </section>
+    </div>
+</section>
+{% endblock %}

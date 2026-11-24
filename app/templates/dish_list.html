@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="wrap page">
+  <h1>Блюда</h1>
+  <a href="{% url 'dish_upload' %}" class="button">Добавить блюдо</a>
+  <ul>
+    {% for d in dishes %}
+      <li>
+        {{ d.name }} —
+        {% if d.photo %}<img src="{{ d.photo.url }}" width="80" alt="">{% else %}без фото{% endif %}
+      </li>
+    {% empty %}
+      <li>Пока нет блюд</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

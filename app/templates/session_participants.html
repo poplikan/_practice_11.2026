@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="wrap page">
+  <h1>Участники: {{ schedule.masterclass.title }}</h1>
+  <p>{{ schedule.start_datetime|date:"d.m.Y H:i" }} · Зал «{{ schedule.hall.name }}» · Шеф: {{ schedule.chef.name }}</p>
+  <table class="table">
+    <thead><tr><th>Пользователь</th><th>Тип</th><th>Порций</th><th>Сумма</th><th>Статус</th></tr></thead>
+    <tbody>
+      {% for b in bookings %}
+        <tr>
+          <td>{{ b.user.username }}</td>
+          <td>{{ b.get_ticket_type_display }}</td>
+          <td>{{ b.portions }}</td>
+          <td>{{ b.total }} ₽</td>
+          <td>{{ b.get_status_display }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5">Участников нет</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

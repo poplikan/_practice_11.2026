@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Бронирование — ВКУСНО{% endblock %}
+
+{% block content %}
+<section class="wrap page narrow">
+    <h1>Бронирование станции</h1>
+
+    <form method="post"
+          action="{% url 'booking' session.id %}"
+          class="panel booking-form"
+          id="booking-form">
+        {% csrf_token %}
+
+        {# === главное: masterclass + start_datetime === #}
+        <h2>{{ session.masterclass.title }}</h2>
+
+        <p>
+            {{ session.start_datetime|date:"d.m.Y · H:i" }}
+            · Зал «{{ session.hall.name }}»
+        </p>
+
+        <p>Шеф-повар: {{ session.chef.name }}</p>
+
+        <input type="hidden" id="adult-price"
+               value="{{ session.masterclass.adult_price }}">
+        <input type="hidden" id="child-discount"
+               value="{{ session.masterclass.child_discount }}">
+
+        <fieldset class="ticket-types">
+            <legend>Тип билета</legend>
+
+            <label>
+                <input type="radio" name="ticket_type" value="single" checked
+                       data-price="{{ session.masterclass.adult_price }}">
+                Один взрослый — <b>{{ session.masterclass.adult_price }} ₽</b>
+            </label>
+
+            <label>
+                <input type="radio" name="ticket_type" value="pair"
+                       data-price="{{ session.masterclass.adult_price }}">
+                Взрослый + ребёнок
+                (скидка {{ session.masterclass.child_discount }}% на детский)
+                — <b>рассчитается</b>
+            </label>
+        </fieldset>
+
+        <label>
+            Количество порций:
+            <input type="number" name="portions" id="portions"
+                   value="1" min="1" max="10" required>
+        </label>
+
+        <p>
+            Свободно станций:
+            <b id="free-seats"
+               data-api="{% url 'api_session_seats' session.id %}">
+                {{ session.hall.station_count }}
+            </b>
+        </p>
+
+        <p class="total">
+            Итого к оплате: <b id="total-price">—</b>
+        </p>
+
+        <p class="muted">
+            Парная бронь занимает одну рабочую станцию и включает две порции.
+        </p>
+
+        <button class="button full" type="submit">Подтвердить бронь</button>
+    </form>
+</section>
+
+<script>
+(function () {
+    const form = document.getElementById("booking-form");
+    if (!form) return;
+
+    const adultPrice = parseFloat(document.getElementById("adult-price")?.value || "0") || 0;
+    const childDisc  = parseFloat(document.getElementById("child-discount")?.value || "0") || 0;
+    const childPrice = Math.round(adultPrice * (100 - childDisc) / 100);
+    const totalEl    = document.getElementById("total-price");
+    const portionsEl = document.getElementById("portions");
+
+    const getType = () =>
+        form.querySelector('input[name="ticket_type"]:checked')?.value || "single";
+
+    function recalc() {
+        const type = getType();
+
+        if (type === "pair") {
+            portionsEl.value = 2;
+            portionsEl.readOnly = true;
+        } else {
+            portionsEl.readOnly = false;
+        }
+
+        const portions = type === "pair"
+            ? 2
+            : Math.max(1, parseInt(portionsEl.value || "1", 10));
+
+        const total = type === "pair"
+            ? adultPrice + childPrice
+            : adultPrice * portions;
+
+        totalEl.textContent = total.toLocaleString("ru-RU") + " ₽";
+    }
+
+    form.querySelectorAll('input[name="ticket_type"]').forEach(r =>
+        r.addEventListener("change", recalc)
+    );
+    portionsEl.addEventListener("input", recalc);
+    recalc();
+})();
+</script>
+{% endblock %}

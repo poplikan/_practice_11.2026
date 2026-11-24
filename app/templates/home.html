@@ -1,0 +1,59 @@
+
+{% extends "base.html" %}
+{% load static %}
+{% block title %}ВКУСНО — кулинарные мастер-классы{% endblock %}
+{% block content %}
+
+<section class="hero wrap">
+    <!-- Картинка на фоне всей секции -->
+    <img class="hero-bg" src="/static/images/hero-bg.jpg" 
+         alt="Кулинарный мастер-класс" 
+         width="1200" height="400" loading="lazy">
+
+    <div>
+        <p class="eyebrow">КУЛИНАРНАЯ СТУДИЯ</p>
+        <h1>Готовим с удовольствием</h1>
+        <p class="lead">Кулинарные мастер-классы для тех, кто любит вкусную жизнь</p>
+        <a class="button" href="{% url 'catalog' %}">Выбрать МК</a>
+    </div>
+    
+    <!-- Текстовый блок справа (без картинки внутри, только текст) -->
+    <div class="hero-note">
+        <div class="hero-note-content">
+            <h2>Откройте новые вкусы</h2>
+            <p>Учитесь готовить у шефов и пробуйте кухни мира</p>
+        </div>
+    </div>
+</section>
+
+<section class="wrap section">
+    <h2>Кухни мира</h2>
+    <div class="cuisine-grid">
+        <a class="cuisine mint" href="{% url 'catalog' %}?cuisine=Итальянская">Итальянская</a>
+        <a class="cuisine peach" href="{% url 'catalog' %}?cuisine=Азиатская">Азиатская</a>
+        <a class="cuisine lavender" href="{% url 'catalog' %}?cuisine=Французская">Французская</a>
+    </div>
+</section>
+
+<section class="wrap section">
+    <div class="section-head">
+        <h2>Ближайшие мастер-классы</h2>
+        <a href="{% url 'catalog' %}">Вся афиша →</a>
+    </div>
+    <div class="cards">
+        {% for s in sessions %}
+        <article class="card">
+            <div class="card-top">{{ s.masterclass.cuisine }}</div>
+            <h3>{{ s.masterclass.title }}</h3>
+            <p>{{ s.start_datetime|date:"d E · H:i" }}</p>
+            <div class="card-bottom">
+                <b>от {{ s.masterclass.adult_price }} ₽</b>
+                <a href="{% url 'workshop_detail' s.masterclass.pk %}">Подробнее</a>
+            </div>
+        </article>
+        {% empty %}
+        <p>Скоро здесь появятся новые занятия.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

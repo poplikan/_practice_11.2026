@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Вход для шефа — ВКУСНО{% endblock %}
+{% block content %}
+<section class="wrap page narrow">
+    <div class="panel">
+        <h1>Вход для шефа</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            {% if form.errors %}
+                <p class="muted" style="color:#b00">Неверный логин или пароль.</p>
+            {% endif %}
+            <button class="button full" type="submit">Войти</button>
+        </form>
+        <p class="muted">
+            Нет аккаунта шефа?
+            <a href="{% url 'chef_signup' %}">Зарегистрироваться как шеф</a>
+        </p>
+        <p class="muted">
+            Вы участник? <a href="{% url 'login' %}">Обычный вход</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

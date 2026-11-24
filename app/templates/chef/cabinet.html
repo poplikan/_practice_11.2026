@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Кабинет шефа — ВКУСНО{% endblock %}
+{% block content %}
+<section class="wrap page">
+    <h1>Кабинет шефа: {{ chef.name }}</h1>
+    <p class="muted">{{ chef.description }}</p>
+
+    <h2>Мои занятия</h2>
+    <div class="panel table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Мастер-класс</th>
+                    <th>Зал</th>
+                    <th>Статус</th>
+                    <th>Участников</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.start_datetime|date:"d.m.Y H:i" }}</td>
+                    <td>{{ s.masterclass.title }}</td>
+                    <td>{{ s.hall.name }}</td>
+                    <td>{{ s.get_status_display }}</td>
+                    <td>{{ s.bookings.count }}</td>
+                    <td>
+                        <a class="button small"
+                           href="{% url 'chef_session_participants' s.id %}">
+                            Участники
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">У вас пока нет занятий.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

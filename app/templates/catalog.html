@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Афиша мастер-классов{% endblock %}
+{% block content %}
+<section class="wrap page">
+    <h1>Афиша мастер-классов</h1>
+    <p class="muted">Выберите занятие и забронируйте удобную дату</p>
+
+    <form class="filters" method="get" id="catalog-filters" action="{% url 'catalog' %}">
+        <input name="q" id="search-q" placeholder="Поиск мастер-класса" value="{{ request.GET.q }}" autocomplete="off">
+
+        <select name="cuisine" id="filter-cuisine">
+            <option value="">Кухня</option>
+            {% for v,l in cuisines %}
+            <option value="{{ v }}" {% if request.GET.cuisine == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="chef" id="filter-chef">
+            <option value="">Шеф-повар</option>
+            {% for c in chefs %}
+            <option value="{{ c.id }}" {% if request.GET.chef == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="date" name="date" id="filter-date" value="{{ request.GET.date }}">
+
+        <select name="sort" id="filter-sort">
+            <option value="">Сортировка</option>
+            <option value="name"  {% if request.GET.sort == "name"  %}selected{% endif %}>По названию</option>
+            <option value="price" {% if request.GET.sort == "price" %}selected{% endif %}>По цене</option>
+            <option value="date"  {% if request.GET.sort == "date"  %}selected{% endif %}>По дате</option>
+        </select>
+
+        <button class="button" type="submit">Найти</button>
+        <a href="{% url 'catalog' %}" class="button button-secondary" id="reset-filters">Сбросить</a>
+    </form>
+
+    <h2>
+        Все мастер-классы
+        <small id="catalog-count" class="muted">
+            {% if total %}({{ total }}){% endif %}
+        </small>
+    </h2>
+
+    <div id="catalog-results">
+        {% include "partials/_workshop_cards.html" %}
+    </div>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("catalog-filters");
+    const results = document.getElementById("catalog-results");
+    const countEl = document.getElementById("catalog-count");
+
+    if (!form || !results) {
+        console.error("Не найдены элементы формы или результатов!");
+        return;
+    }
+
+    let timeout = null;
+
+    // Функция загрузки данных
+    async function fetchCatalog(url) {
+        results.style.opacity = "0.5";
+        try {
+            const res = await fetch(url, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            if (!res.ok) throw new Error("Ошибка сервера");
+            const data = await res.json();
+
+            results.innerHTML = data.html;
+            if (countEl) countEl.textContent = data.count ? `(${data.count})` : "";
+
+            // Обновляем URL, чтобы можно было скопировать ссылку
+            history.pushState(null, "", url);
+
+        } catch (err) {
+            console.error("Ошибка при поиске:", err);
+        } finally {
+            results.style.opacity = "1";
+        }
+    }
+
+    // Собираем URL из формы
+    function getFormUrl() {
+        const params = new URLSearchParams(new FormData(form));
+        // Удаляем пустые параметры
+        for (let [key, val] of [...params.entries()]) {
+            if (!val) params.delete(key);
+        }
+        const qs = params.toString();
+        return form.action + (qs ? "?" + qs : "");
+    }
+
+    // 1. Живой поиск по буквам (с небольшой задержкой 300мс, чтобы не спамить)
+    document.getElementById("search-q").addEventListener("input", () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fetchCatalog(getFormUrl()), 300);
+    });
+
+    // 2. Фильтры (кухня, шеф, дата, сортировка) - срабатывают сразу
+    document.querySelectorAll("#filter-cuisine, #filter-chef, #filter-date, #filter-sort").forEach(el => {
+        el.addEventListener("change", () => fetchCatalog(getFormUrl()));
+    });
+
+    // 3. Кнопка "Найти" - без перезагрузки
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        fetchCatalog(getFormUrl());
+    });
+
+    // 4. Кнопка "Сбросить"
+    document.getElementById("reset-filters").addEventListener("click", (e) => {
+        e.preventDefault();
+        form.reset(); // Очищает все поля формы
+        fetchCatalog(form.action);
+    });
+});
+</script>
+{% endblock %}

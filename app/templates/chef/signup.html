@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Регистрация шефа — ВКУСНО{% endblock %}
+{% block content %}
+<section class="wrap page narrow">
+    <div class="panel">
+        <h1>Регистрация шефа</h1>
+        <p class="muted">Аккаунт даёт доступ к вашим занятиям и спискам участников.</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="button full" type="submit">Создать аккаунт шефа</button>
+        </form>
+        <p class="muted">
+            Уже есть аккаунт? <a href="{% url 'chef_login' %}">Войти</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

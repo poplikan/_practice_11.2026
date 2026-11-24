@@ -1,0 +1,14 @@
+<div class="cards" id="workshop-cards">
+    {% for item in workshops %}
+    <article class="card">
+        <div class="card-top">{{ item.cuisine.name }}</div>
+        <h3>{{ item.title }}</h3>
+        <div class="card-bottom">
+            <b>от {{ item.adult_price }} ₽</b>
+            <a href="{% url 'workshop_detail' item.pk %}">Подробнее</a>
+        </div>
+    </article>
+    {% empty %}
+    <div class="empty">По вашему запросу ничего не найдено. Измените фильтры.</div>
+    {% endfor %}
+</div>
