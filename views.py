@@ -20,6 +20,7 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.contrib.auth import logout as auth_logout
 from .forms import ChefSignUpForm
+from datetime import datetime
 from .services import (
     book_station, generate_purchase_list,
     occupied_seats, booking_is_open, calc_total,   
@@ -65,8 +66,14 @@ def catalog(request):
 
     date = request.GET.get("date")
     if date:
-        
-        qs = qs.filter(schedules__start_datetime__date=date).distinct()
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            date = None
+        if date:
+            qs = qs.filter(schedules__start_datetime__date=date)
+        else:
+            qs = qs.none()
 
     sort = request.GET.get("sort")
     if sort == "price":
