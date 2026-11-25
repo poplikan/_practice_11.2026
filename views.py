@@ -13,6 +13,9 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+from django.template.loader import render_to_string
+from django.http import JsonResponse
 
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -25,6 +28,7 @@ from django.contrib.auth import logout as auth_logout
 from django.http import HttpResponseForbidden
 from .forms import ChefSignUpForm
 from datetime import datetime
+from django.core.exceptions import PermissionDenied
 from .services import (
     book_station, generate_purchase_list,
     occupied_seats, booking_is_open, calc_total,   
@@ -48,7 +52,11 @@ def home(request):
     )
     return render(request, "home.html", {"sessions": sessions})
 
+from django.core.paginator import Paginator
+
+
 def catalog(request):
+    
     qs = MasterClass.objects.select_related("cuisine").all()
 
     q = request.GET.get("q", "").strip()
@@ -90,21 +98,38 @@ def catalog(request):
     else:
         qs = qs.order_by("title")
 
+    # ---------- Пагинация ----------
+    paginator = Paginator(qs, 12)  
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)  
+
     context = {
-        "workshops": qs,
+        "workshops": page_obj,       # в шаблоне цикл for w in workshops теперь идёт по странице
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "is_paginated": page_obj.has_other_pages(),
         "cuisines": Cuisine.objects.values_list("name", "name"),
         "chefs": Chef.objects.all(),
-        "total": qs.count(),
+        "total": paginator.count,    # общее число МК, не только на странице
     }
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         html = render_to_string(
             "partials/_workshop_cards.html",
-            {"workshops": qs},
+            {
+                "workshops": page_obj,
+                "page_obj": page_obj,
+                "is_paginated": page_obj.has_other_pages(),
+            },
             request=request,
         )
-        return JsonResponse({"html": html, "count": qs.count()})
-
+        return JsonResponse({
+            "html": html,
+            "count": paginator.count,
+            "page": page_obj.number,
+            "num_pages": paginator.num_pages,
+        })
+    
     return render(request, "catalog.html", context)
 
 def workshop_detail(request, pk):
@@ -156,7 +181,6 @@ def booking_create(request, session_id):
     return render(request, "booking.html", {"session": schedule})
 
 @login_required
-@require_POST
 def booking_edit(request, booking_id):
     booking = get_object_or_404(Booking, pk=booking_id, user=request.user)
 
@@ -164,23 +188,28 @@ def booking_edit(request, booking_id):
         messages.error(request, "Отменённую бронь нельзя изменить.")
         return redirect("cabinet")
 
-    new_type = request.POST.get("ticket_type")
-    if new_type not in ("single", "pair"):
-        messages.error(request, "Некорректный тип билета")
-        return redirect("cabinet")
-
-
     if not booking_is_open(booking.schedule):
         messages.error(request, "Занятие уже закрыто для изменения брони.")
         return redirect("cabinet")
 
-    booking.ticket_type = new_type
-    booking.portions = 1
-    booking.total = calc_total(booking.schedule.masterclass, new_type, 1)
-    booking.save()
+    if request.method == "POST":
+        new_type = request.POST.get("ticket_type")
 
-    messages.success(request, "Бронь обновлена")
-    return redirect("cabinet")
+        if new_type not in ("single", "pair"):
+            messages.error(request, "Некорректный тип билета.")
+            return redirect("cabinet")
+
+        booking.ticket_type = new_type
+        booking.portions = 1
+        booking.total = calc_total(
+            booking.schedule.masterclass, new_type, 1
+        )
+        booking.save()
+
+        messages.success(request, "Бронь обновлена.")
+        return redirect("cabinet")
+
+    return render(request, "booking_edit.html", {"booking": booking})
 
 @login_required
 @require_POST
@@ -294,12 +323,14 @@ def dashboard(request):
 
 
 # ---------- FR-16: Шеф видит участников своего занятия ----------
-@staff_member_required
+@login_required
 def session_participants(request, schedule_id):
     schedule = get_object_or_404(
         Schedule.objects.select_related("masterclass", "hall", "chef"),
         pk=schedule_id,
     )
+    if not request.user.is_staff:
+        raise PermissionDenied   # → 403.html
     bookings = (
         schedule.bookings.filter(status__in=["active", "paid"])
         .select_related("user").order_by("-created_at")
@@ -380,10 +411,12 @@ def chef_cabinet(request):
 def chef_session_participants(request, schedule_id):
     if not hasattr(request.user, "chef_profile"):
         return HttpResponseForbidden("Нет профиля шефа")
-    schedule = get_object_or_404(...)
+
+    schedule = get_object_or_404(Schedule, pk=schedule_id)
+
     if schedule.chef_id != request.user.chef_profile.id:
-        return HttpResponseForbidden("Это занятие ведёт другой шеф.")
     
+        raise PermissionDenied
 
     bookings = (
         schedule.bookings
@@ -391,12 +424,11 @@ def chef_session_participants(request, schedule_id):
         .select_related("user")
         .order_by("-created_at")
     )
+
     return render(request, "chef/session_participants.html", {
         "schedule": schedule,
         "bookings": bookings,
     })
-
-
 
 @staff_member_required
 def schedule_list(request):
@@ -435,3 +467,14 @@ def session_delete(request, schedule_id):
     schedule.delete()
     messages.success(request, "Занятие удалено")
     return redirect("schedule_list")
+
+
+
+def custom_403(request, exception):
+    return render(request, "403.html", status=403)
+
+def custom_404(request, exception):
+    return render(request, "404.html", status=404)
+
+def custom_500(request):
+    return render(request, "500.html", status=500)
