@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Страница не найдена — ВКУСНО{% endblock %}
+{% block content %}
+<section class="wrap page narrow">
+  <div class="panel">
+    <h1>404 — Страница не найдена</h1>
+    <p>Возможно, мастер-класс уже прошёл, ссылка устарела или в адресе опечатка.</p>
+    <form method="get" action="{% url 'catalog' %}" class="filters">
+      <input name="q" placeholder="Поиск мастер-класса" value="">
+      <button class="button" type="submit">Найти</button>
+    </form>
+    <p>
+      <a class="button" href="{% url 'home' %}">На главную</a>
+      <a class="button button-secondary" href="{% url 'catalog' %}">Вся афиша</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

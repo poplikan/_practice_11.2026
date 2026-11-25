@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Доступ запрещён — ВКУСНО{% endblock %}
+{% block content %}
+<section class="wrap page narrow">
+  <div class="panel">
+    <h1>403 — Доступ запрещён</h1>
+    <p>У вас нет прав на это действие. Возможно, вы открыли чужую бронь или страницу, доступную только администратору.</p>
+    <p>
+      <a class="button" href="{% url 'home' %}">На главную</a>
+      <a class="button button-secondary" href="{% url 'catalog' %}">В афишу</a>
+    </p>
+    <p class="muted">Если вы считаете, что это ошибка, напишите нам: hello@vkusno.example</p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Ошибка сервера — ВКУСНО{% endblock %}
+{% block content %}
+<section class="wrap page narrow">
+  <div class="panel">
+    <h1>500 — Что-то пошло не так</h1>
+    <p>Мы уже знаем об ошибке и скоро её исправим. Попробуйте обновить страницу через минуту.</p>
+    <p>
+      <a class="button" href="{% url 'home' %}">На главную</a>
+      <a class="button button-secondary" href="{% url 'catalog' %}">В афишу</a>
+    </p>
+    <p class="muted">Если ошибка повторяется — напишите на hello@vkusno.example с указанием страницы.</p>
+  </div>
+</section>
+{% endblock %}
