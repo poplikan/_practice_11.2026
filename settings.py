@@ -27,9 +27,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = False
 
 
-
+#
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-...")
-DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 # Application definition
